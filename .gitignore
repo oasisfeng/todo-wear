@@ -1,0 +1,12 @@
+# Android Studio
+.gradle/
+.idea/
+build/
+local.properties
+*.iml
+*.hprof
+*.keystore
+*.log
+
+# macOS
+.DS_Store
