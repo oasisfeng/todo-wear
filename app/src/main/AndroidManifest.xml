@@ -3,6 +3,7 @@
 
     <uses-feature android:name="android.hardware.type.watch" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
@@ -71,7 +72,14 @@
         <activity
             android:name=".TodoistAuthActivity"
             android:exported="true"
-            android:label="Todoist API Token" />
+            android:label="Todoist API Token">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="todowear" android:host="auth" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
