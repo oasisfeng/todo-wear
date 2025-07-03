@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,6 +18,18 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) localProperties.load(localPropertiesFile.inputStream())
+        val todoistClientId = localProperties.getProperty("TODOIST_CLIENT_ID")
+            ?: System.getenv("TODOIST_CLIENT_ID")
+            ?: throw GradleException("TODOIST_CLIENT_ID not found in local.properties or environment variables.")
+        val todoistClientSecret = localProperties.getProperty("TODOIST_CLIENT_SECRET")
+            ?: System.getenv("TODOIST_CLIENT_SECRET")
+            ?: throw GradleException("TODOIST_CLIENT_SECRET not found in local.properties or environment variables.")
+
+        buildConfigField("String", "TODOIST_CLIENT_ID", "\"$todoistClientId\"")
+        buildConfigField("String", "TODOIST_CLIENT_SECRET", "\"$todoistClientSecret\"")
     }
 
     buildTypes {
@@ -27,6 +41,7 @@ android {
             )
         }
     }
+    buildFeatures.buildConfig = true
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -59,6 +74,7 @@ dependencies {
     implementation(libs.watchface.complications.data.source.ktx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
+    implementation(libs.wear.phone.interactions)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)

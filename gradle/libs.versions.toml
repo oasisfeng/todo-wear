@@ -17,6 +17,7 @@ horologistTiles = "0.6.17"
 watchfaceComplicationsDataSourceKtx = "1.2.1"
 kotlinxSerializationJson = "1.9.0"
 okhttp = "4.12.0"
+wearPhoneInteractions = "1.0.0"
 
 [libraries]
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
@@ -41,6 +42,7 @@ horologist-tiles = { group = "com.google.android.horologist", name = "horologist
 watchface-complications-data-source-ktx = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "watchfaceComplicationsDataSourceKtx" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+wear-phone-interactions = { group = "androidx.wear", name = "wear-phone-interactions", version.ref = "wearPhoneInteractions" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
