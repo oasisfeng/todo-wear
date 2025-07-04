@@ -7,6 +7,4 @@ plugins {
 
 // Apply local.gradle if it exists
 val localGradleFile = file("local.gradle")
-if (localGradleFile.exists()) {
-    apply(from = localGradleFile)
-}
+if (localGradleFile.exists()) apply(from = localGradleFile)
