@@ -6,15 +6,16 @@ import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.Column
+import androidx.wear.protolayout.LayoutElementBuilders.Layout
 import androidx.wear.protolayout.LayoutElementBuilders.Spacer
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.protolayout.TimelineBuilders
+import androidx.wear.protolayout.TimelineBuilders.TimelineEntry
 import androidx.wear.protolayout.material.Colors
 import androidx.wear.protolayout.material.CompactChip
 import androidx.wear.protolayout.material.Text
 import androidx.wear.protolayout.material.Typography
-import androidx.wear.protolayout.material.layouts.PrimaryLayout
 import androidx.wear.tiles.RequestBuilders.ResourcesRequest
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders
@@ -26,8 +27,14 @@ import com.google.android.horologist.tiles.SuspendingTileService
 import com.oasisfeng.todo.wear.TokenManager
 import com.oasisfeng.todo.wear.TodoistAuthActivity
 import com.oasisfeng.todo.wear.data.TodoistRepository
-import kotlinx.coroutines.runBlocking
+import com.oasisfeng.todo.wear.data.TodoistTask
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
+private const val MAX_NUM_TASKS = 8         // Max number of tasks to show in the tile
+private const val DEFAULT_FRESHNESS_INTERVAL_MILLIS = 30 * 60_000L
 private const val RESOURCES_VERSION = "0"
 
 /**
@@ -36,95 +43,79 @@ private const val RESOURCES_VERSION = "0"
 @OptIn(ExperimentalHorologistApi::class)
 class MainTileService : SuspendingTileService() {
 
+    override suspend fun tileRequest(requestParams: TileRequest) = buildTile(this, requestParams)
     override suspend fun resourcesRequest(requestParams: ResourcesRequest) = resources(requestParams)
-    override suspend fun tileRequest(requestParams: TileRequest) = tile(this, requestParams)
 }
 
-private fun resources(requestParams: ResourcesRequest): ResourceBuilders.Resources {
-    return ResourceBuilders.Resources.Builder().setVersion(RESOURCES_VERSION).build()
-}
-
-private data class TodoItem(val title: String, val secondaryText: String)
-
-private suspend fun tile(context: Context, requestParams: TileRequest): TileBuilders.Tile {
-    val singleTileTimeline = TimelineBuilders.Timeline.Builder().addTimelineEntry(
-        TimelineBuilders.TimelineEntry.Builder().setLayout(
-            LayoutElementBuilders.Layout.Builder().setRoot(tileLayout(requestParams, context)).build()
-        ).build()
-    ).build()
-
+private suspend fun buildTile(context: Context, request: TileRequest): TileBuilders.Tile {
+    val timeline = buildTimeline(context, request)
     return TileBuilders.Tile.Builder().setResourcesVersion(RESOURCES_VERSION)
-        .setTileTimeline(singleTileTimeline).build()
+        .setTileTimeline(timeline).setFreshnessIntervalMillis(DEFAULT_FRESHNESS_INTERVAL_MILLIS).build()
 }
 
-private suspend fun tileLayout(
-    requestParams: TileRequest,
-    context: Context,
-): LayoutElementBuilders.LayoutElement {
+private suspend fun buildTimeline(context: Context, request: TileRequest): TimelineBuilders.Timeline {
     val token = TokenManager.getToken(context)
-    if (token.isNullOrEmpty()) {
-        return PrimaryLayout.Builder(requestParams.deviceConfiguration)
-            .setResponsiveContentInsetEnabled(true).setContent(
-                CompactChip.Builder(
-                    context, "Login", Clickable.Builder().setOnClick(
-                        ActionBuilders.LaunchAction.Builder().setAndroidActivity(
-                            ActionBuilders.AndroidActivity.Builder()
-                                .setPackageName(context.packageName)
-                                .setClassName(TodoistAuthActivity::class.java.name).build()
-                        ).build()
-                    ).build(), requestParams.deviceConfiguration
-                ).build()
-            ).build()
-    }
+    if (token.isNullOrEmpty())
+        return TimelineBuilders.Timeline.fromLayoutElement(loginElement(request, context))
 
     val repository = TodoistRepository.create()
-    val todoItemsResult = repository.getTasks(token)
+    val result = repository.getTasks(token, MAX_NUM_TASKS, "date before: +4 hours & !no time")
 
-    val todoItems = todoItemsResult.getOrNull()?.map { task ->
-        TodoItem(task.content, task.dueDate?.string ?: "")
-    } ?: emptyList()
-
-    return PrimaryLayout.Builder(requestParams.deviceConfiguration)
-        .setResponsiveContentInsetEnabled(true).setContent(Column.Builder().also { column ->
-            if (todoItems.isEmpty()) {
-                column.addContent(
-                    Text.Builder(context, "No tasks found.")
-                        .setTypography(Typography.TYPOGRAPHY_BODY1)
-                        .setColor(argb(Colors.DEFAULT.onSurface))
-                        .build()
-                )
-            } else {
-                todoItems.forEachIndexed { index, item ->
-                    column.addContent(
-                        Text.Builder(context, item.title).setTypography(Typography.TYPOGRAPHY_BODY1)
-                            .setColor(argb(Colors.DEFAULT.onSurface)).build()
-                    )
-                    if (item.secondaryText.isNotEmpty()) {
-                        column.addContent(
-                            Text.Builder(context, item.secondaryText).setTypography(Typography.TYPOGRAPHY_CAPTION1)
-                                .setColor(argb(Colors.DEFAULT.onSurface)).build()
-                        )
-                    }
-                    if (index < todoItems.size - 1)
-                        column.addContent(Spacer.Builder().setHeight(dp(8f)).build())
-                }
-            }
-        }.build()).build()
+    val tasks = result.getOrNull().orEmpty()
+    return buildTimelineForTasks(context, tasks)
 }
 
-@Preview(device = WearDevices.SMALL_ROUND)
-@Preview(device = WearDevices.LARGE_ROUND)
-fun tilePreview(context: Context) = TilePreviewData(
-    onTileResourceRequest = ::resources
-) { request ->
+private fun buildTimelineForTasks(context: Context, tasks: List<TodoistTask>): TimelineBuilders.Timeline {
+    if (tasks.isEmpty())
+        return TimelineBuilders.Timeline.fromLayoutElement(textElement(context, "No matched tasks."))
+
+    val timeFormatter by lazy { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
+    val dateTimeFormatter by lazy { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT) }
+    var isFirst = true
+
+    val timeline = TimelineBuilders.Timeline.Builder()
+    val column = Column.Builder()
+    val ( tasksWithTime, tasksWithoutTime ) = tasks.partition { it.due?.date?.toLocalTime() != LocalTime.MIN }
+    val tasksSorted = tasksWithTime.sortedBy { it.due!!.date } + tasksWithoutTime.sortedBy { it.day_order }
+    tasksSorted.forEach { task ->
+        if (isFirst) isFirst = false
+        else column.addContent(Spacer.Builder().setHeight(dp(8f)).build())
+
+        val prefix = if (task.due != null) {
+            val due = task.due.date
+            if (due.toLocalDate().isEqual(LocalDate.now())) {   // Today
+                if (due.toLocalTime() <= LocalTime.MIN) null            //  without time
+                else due.toLocalTime().format(timeFormatter)            //  with time
+            } else due.format(dateTimeFormatter)
+        } else null
+
+        column.addContent(textElement(context, if (prefix != null) "$prefix ${task.content}" else task.content))
+        if (! task.description.isNullOrEmpty())
+            column.addContent(textElement(context, task.description, Typography.TYPOGRAPHY_BODY2))
+    }
+
+    timeline.addTimelineEntry(TimelineEntry.Builder().setLayout(Layout.Builder().setRoot(column.build()).build()).build())
+    return timeline.build()
+}
+
+private fun loginElement(request: TileRequest, context: Context): LayoutElementBuilders.LayoutElement
+= CompactChip.Builder(context, "Login", Clickable.Builder().setOnClick(ActionBuilders.LaunchAction.Builder()
+    .setAndroidActivity(ActionBuilders.AndroidActivity.Builder()
+        .setPackageName(context.packageName).setClassName(TodoistAuthActivity::class.java.name).build()).build()
+).build(), request.deviceConfiguration).build()
+
+fun textElement(context: Context, text: String, typography: Int = Typography.TYPOGRAPHY_BODY1)
+= Text.Builder(context, text).setTypography(typography).setColor(argb(Colors.DEFAULT.onSurface)).build()
+
+@Preview(device = WearDevices.SMALL_ROUND) @Preview(device = WearDevices.LARGE_ROUND)
+fun tilePreview(context: Context) = TilePreviewData(onTileResourceRequest = ::resources) { request ->
+    val tasks = listOf(
+        TodoistTask(content = "Yoga", description = "with neighbors", priority = 1, day_order = 1, id = "1", project_id = "project1"),
+        TodoistTask(content = "Buy milk", priority = 1, day_order = 1, id = "1", project_id = "project2"),
+        TodoistTask(content = "Clean the 1st floor", priority = 1, day_order = 1, id = "1", project_id = "project1"))
     TileBuilders.Tile.Builder().setResourcesVersion(RESOURCES_VERSION)
-        .setTileTimeline(
-            TimelineBuilders.Timeline.Builder().addTimelineEntry(
-                TimelineBuilders.TimelineEntry.Builder().setLayout(
-                    LayoutElementBuilders.Layout.Builder().setRoot(
-                        runBlocking { tileLayout(request, context) }
-                    ).build()
-                ).build()
-            ).build()
-        ).build()
+        .setTileTimeline(buildTimelineForTasks(context, tasks)).build()
 }
+
+private fun resources(@Suppress("unused") r: ResourcesRequest)
+= ResourceBuilders.Resources.Builder().setVersion(RESOURCES_VERSION).build()

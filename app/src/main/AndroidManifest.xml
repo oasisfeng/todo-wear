@@ -33,30 +33,18 @@
                 android:name="android.support.wearable.complications.UPDATE_PERIOD_SECONDS"
                 android:value="0" />
         </service>
-        <service
-            android:name=".tile.MainTileService"
-            android:exported="true"
-            android:label="@string/tile_label"
-            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+
+        <service android:name=".tile.MainTileService" android:label="@string/tile_label"
+            android:exported="true" android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
             <intent-filter>
                 <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
             </intent-filter>
 
-            <meta-data
-                android:name="androidx.wear.tiles.PREVIEW"
-                android:resource="@drawable/tile_preview" />
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/tile_preview" />
         </service>
 
-        <uses-library
-            android:name="com.google.android.wearable"
-            android:required="true" />
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
-        <meta-data
-            android:name="com.google.android.wearable.standalone"
-            android:value="true" />
+        <uses-library android:name="com.google.android.wearable" android:required="true" />
+        <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
 
         <activity
             android:name=".presentation.MainActivity"
@@ -65,21 +53,17 @@
             android:theme="@style/MainActivityTheme.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".TodoistAuthActivity"
-            android:exported="true"
-            android:label="Todoist API Token">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="todowear" android:host="auth" />
-            </intent-filter>
+            android:exported="false"
+            android:label="Todoist Authentication"
+            android:taskAffinity="">
         </activity>
+
     </application>
 
 </manifest>
