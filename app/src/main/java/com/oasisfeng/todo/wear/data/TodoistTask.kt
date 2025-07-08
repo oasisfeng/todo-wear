@@ -27,9 +27,10 @@ data class TodoistTask(
 
 @Serializable
 data class Due(
-    @Serializable(with = DueDateSerializer::class) val date: LocalDateTime,
-    val timezone: String?,
-    val is_recurring: Boolean,
+    @Serializable(with = DueDateSerializer::class)
+    val date: LocalDateTime,
+    val timezone: String? = null,
+    val is_recurring: Boolean = false,
     val string: String
 )
 

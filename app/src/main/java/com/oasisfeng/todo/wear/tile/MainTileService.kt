@@ -26,9 +26,11 @@ import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.tiles.SuspendingTileService
 import com.oasisfeng.todo.wear.TokenManager
 import com.oasisfeng.todo.wear.TodoistAuthActivity
+import com.oasisfeng.todo.wear.data.Due
 import com.oasisfeng.todo.wear.data.TodoistRepository
 import com.oasisfeng.todo.wear.data.TodoistTask
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -110,9 +112,15 @@ fun textElement(context: Context, text: String, typography: Int = Typography.TYP
 @Preview(device = WearDevices.SMALL_ROUND) @Preview(device = WearDevices.LARGE_ROUND)
 fun tilePreview(context: Context) = TilePreviewData(onTileResourceRequest = ::resources) { request ->
     val tasks = listOf(
-        TodoistTask(content = "Yoga", description = "with neighbors", priority = 1, day_order = 1, id = "1", project_id = "project1"),
-        TodoistTask(content = "Buy milk", priority = 1, day_order = 1, id = "1", project_id = "project2"),
-        TodoistTask(content = "Clean the 1st floor", priority = 1, day_order = 1, id = "1", project_id = "project1"))
+        TodoistTask(content = "Yoga", description = "with neighbors",
+            due = Due(date = LocalDateTime.now().minusHours(2), string = ""),
+            priority = 1, day_order = 1, id = "1", project_id = "project1"),
+        TodoistTask(content = "Buy milk",
+            due = Due(date = LocalDateTime.now().plusMinutes(30), string = ""),
+            priority = 1, day_order = 1, id = "1", project_id = "project2"),
+        TodoistTask(content = "Clean the 1st floor",
+            due = Due(date = LocalDateTime.now().plusHours(5), string = ""),
+            priority = 1, day_order = 1, id = "1", project_id = "project1"))
     TileBuilders.Tile.Builder().setResourcesVersion(RESOURCES_VERSION)
         .setTileTimeline(buildTimelineForTasks(context, tasks)).build()
 }
