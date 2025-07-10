@@ -66,11 +66,20 @@ dependencies {
     implementation(libs.wear.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.core.splashscreen)
-    implementation(libs.tiles)
-    implementation(libs.tiles.material)
-    implementation(libs.tiles.tooling.preview)
-    implementation(libs.horologist.compose.tools)
+
+    // Horologist provides helpful wrappers for Tiles development
     implementation(libs.horologist.tiles)
+    // Core Tile dependencies for creating the service and layouts
+    implementation(libs.wear.tiles)
+    implementation(libs.wear.protolayout.material)
+    implementation(libs.wear.protolayout.material3)
+    // Tooling dependencies for previewing tiles in Android Studio.
+    debugImplementation(libs.wear.tiles.renderer)
+    debugImplementation(libs.wear.tooling.preview)
+    // The tile preview code is in the same file as the tiles themselves, so this dependency must be available to release builds, not just debug builds.
+    implementation(libs.wear.tiles.tooling)
+    implementation(libs.wear.tiles.tooling.preview)
+
     implementation(libs.watchface.complications.data.source.ktx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
@@ -79,5 +88,4 @@ dependencies {
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
-    debugImplementation(libs.tiles.tooling)
 }
