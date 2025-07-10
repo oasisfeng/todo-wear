@@ -2,6 +2,7 @@ package com.oasisfeng.todo.wear
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 object TokenManager {
 
@@ -13,7 +14,7 @@ object TokenManager {
     }
 
     fun saveToken(context: Context, token: String) {
-        getPrefs(context).edit().putString(KEY_API_TOKEN, token).apply()
+        getPrefs(context).edit { putString(KEY_API_TOKEN, token) }
     }
 
     fun getToken(context: Context): String? {
